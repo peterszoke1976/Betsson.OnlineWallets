@@ -9,54 +9,23 @@ using Microsoft.Extensions.Logging;
 namespace Betsson.OnlineWallets.UnitTests
 {
     [TestClass]
-    public class OnlineWalletServiceTests
+    public class OnlineWalletWithdrawServiceTests
     {
         private readonly Mock<IOnlineWalletRepository> _mockRepo;
         private readonly OnlineWalletService _service;
-        private readonly ILogger<OnlineWalletServiceTests> _logger;
+        private readonly ILogger<OnlineWalletWithdrawServiceTests> _logger;
 
-        public OnlineWalletServiceTests()
+        public OnlineWalletWithdrawServiceTests()
         {
             _mockRepo = new Mock<IOnlineWalletRepository>();
             _service = new OnlineWalletService(_mockRepo.Object);
             var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
-            _logger = loggerFactory.CreateLogger<OnlineWalletServiceTests>();
+            _logger = loggerFactory.CreateLogger<OnlineWalletWithdrawServiceTests>();
         }
 
+       
         [TestMethod]
-        public async Task GetBalanceAsync_NoEntries_ReturnsZero()
-        {
-            // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync((OnlineWalletEntry?)null);
-
-            // Act
-            var result = await _service.GetBalanceAsync();
-
-            // Assert
-            _logger.LogInformation("Balance returned: {Amount}", result.Amount);
-            Assert.AreEqual(0, result.Amount);
-        }
-
-        
-
-        [TestMethod]
-        public async Task DepositFundsAsync_AddsAmount_ReturnsNewBalance()
-        {
-            // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync())
-                .ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 100, Amount = 0 });
-            var deposit = new Deposit { Amount = 50 };
-
-            // Act
-            var result = await _service.DepositFundsAsync(deposit);
-
-            // Assert
-            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
-            _mockRepo.Verify(r => r.InsertOnlineWalletEntryAsync(It.Is<OnlineWalletEntry>(
-                e => e.Amount == 50 && e.BalanceBefore == 100)), Times.Once());
-        }
-
-        [TestMethod]
+        [TestCategory("Negative")]
         public async Task WithdrawFundsAsync_InsufficientBalance_ThrowsException()
         {
             // Arrange
