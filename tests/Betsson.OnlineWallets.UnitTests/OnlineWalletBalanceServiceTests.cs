@@ -80,5 +80,46 @@ namespace Betsson.OnlineWallets.UnitTests
             _logger.LogInformation("Balance returned: {Amount}", result.Amount);
             Assert.AreEqual(50, result.Amount);
         }
+
+        [TestMethod]
+        [TestCategory("Negative")]
+        public async Task GetBalanceAsync_DecimalMaximumBalanceAndValidDeposit_ReturnsException()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = decimal.MaxValue, Amount = 1 });
+
+            // Act & Assert
+            try
+            {
+                await _service.GetBalanceAsync();
+                Assert.Fail("Expected OverflowException was not thrown");
+            }
+            catch (OverflowException ex)
+            {
+                _logger.LogInformation("Expected exception caught: {Message}", ex.Message);
+                Assert.AreEqual("Value was either too large or too small for a Decimal.", ex.Message, "Exception message mismatch");
+            }
+        }
+
+        [TestMethod]
+        [TestCategory("Negative")]
+        public async Task GetBalanceAsync_DecimalMinimumBalanceAndValidWithdraw_ReturnsException()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = decimal.MinValue, Amount = -1 });
+
+            // Act & Assert
+            try
+            {
+                await _service.GetBalanceAsync();
+                Assert.Fail("Expected OverflowException was not thrown");
+            }
+            catch (OverflowException ex)
+            {
+                _logger.LogInformation("Expected exception caught: {Message}", ex.Message);
+                Assert.AreEqual("Value was either too large or too small for a Decimal.", ex.Message, "Exception message mismatch");
+            }
+        }
+
     }
 }

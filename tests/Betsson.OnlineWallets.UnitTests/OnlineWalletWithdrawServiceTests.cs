@@ -89,7 +89,7 @@ namespace Betsson.OnlineWallets.UnitTests
 
         [TestMethod]
         [TestCategory("Negative")]
-        public async Task WithdrawFundsAsync_InsufficientBalance_ThrowsException()
+        public async Task WithdrawFundsAsync_WithdrawInsufficientAmount_ThrowsInsufficientBalanceException()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50, Amount = 0 });
