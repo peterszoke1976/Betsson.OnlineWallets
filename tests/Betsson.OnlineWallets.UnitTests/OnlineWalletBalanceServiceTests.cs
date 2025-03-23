@@ -4,7 +4,6 @@ using Betsson.OnlineWallets.Services;
 using Moq;
 using Microsoft.Extensions.Logging;
 
-
 namespace Betsson.OnlineWallets.UnitTests
 {
     [TestClass]
@@ -54,7 +53,7 @@ namespace Betsson.OnlineWallets.UnitTests
 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task GetBalanceAsync_ExistingBalanceAndValidDeposit_ReturnsAmount()
+        public async Task GetBalanceAsync_ExistingBalanceAndValidDeposit_ReturnsNewBalance()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 100, Amount = 50 });
@@ -69,7 +68,7 @@ namespace Betsson.OnlineWallets.UnitTests
 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task GetBalanceAsync_ExistingBalanceAndValidWithdraw_ReturnsAmount()
+        public async Task GetBalanceAsync_ExistingBalanceAndValidWithdraw_ReturnsNewBalance()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 100, Amount = -50 });
@@ -81,40 +80,5 @@ namespace Betsson.OnlineWallets.UnitTests
             _logger.LogInformation("Balance returned: {Amount}", result.Amount);
             Assert.AreEqual(50, result.Amount);
         }
-
-        [TestMethod]
-        [TestCategory("Negative")]
-        public async Task GetBalanceAsync_TooManyRequests_ThrowsException() //Forced error
-        {
-            // Arrange: Mock the repository to simulate repeated calls
-            _mockRepo.SetupSequence(r => r.GetLastOnlineWalletEntryAsync())
-                .ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 100, Amount = 50 }) // First call
-                .ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 150, Amount = -30 }) // Second call
-                .Throws(new Exception("Too many requests")); // Simulate rate limiting on third call
-
-            try
-            {
-                // Act
-                await _service.GetBalanceAsync(); // First call should succeed
-                await _service.GetBalanceAsync(); // Second call should succeed
-                await _service.GetBalanceAsync(); // Third call should throw - This time, instead of returning a value, it throws an exception - This simulates the behavior of a rate limiter blocking further requests
-            }
-            catch (Exception ex)
-            {
-                // Log the exception
-                _logger.LogError(ex, "Exception occurred: {Message}", ex.Message);
-
-                // Assert
-                Assert.AreEqual("Too many requests", ex.Message);
-            }
-        }
-
-
-
-
-
-
-
-
     }
 }

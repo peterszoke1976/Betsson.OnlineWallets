@@ -1,6 +1,5 @@
 ﻿using Betsson.OnlineWallets.Data.Models;
 using Betsson.OnlineWallets.Data.Repositories;
-using Betsson.OnlineWallets.Exceptions;
 using Betsson.OnlineWallets.Models;
 using Betsson.OnlineWallets.Services;
 using Moq;
@@ -25,7 +24,7 @@ namespace Betsson.OnlineWallets.UnitTests
                 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task DepositFundsAsync_AddsAmount_ReturnsNewBalance()
+        public async Task DepositFundsAsync_DepositAmount_ReturnsNewBalance()
         {
             // Arrange
             _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 0 });
@@ -36,16 +35,49 @@ namespace Betsson.OnlineWallets.UnitTests
 
             // Assert
             _logger.LogInformation("New balance returned: {Amount}", result.Amount);
-            _mockRepo.Verify(r => r.InsertOnlineWalletEntryAsync(It.Is<OnlineWalletEntry>(
-                e => e.Amount == 50 && e.BalanceBefore == 0)), Times.Once());
+            Assert.AreEqual(50, result.Amount);
         }
 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task DepositFundsAsync_ExistingBalanceAndAddsAmount_ReturnsNewBalance()
+        public async Task DepositFundsAsync_DepositLowDecimalAmount_ReturnsNewBalance()
         {
             // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 10 });
+            
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 0 });
+            var deposit = new Deposit { Amount = 0.1m };
+
+            // Act
+            var result = await _service.DepositFundsAsync(deposit);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(0.1m, result.Amount);
+        }
+
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task DepositFundsAsync_DepositHighAmount_ReturnsNewBalance()
+        {
+            // Arrange
+
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 0 });
+            var deposit = new Deposit { Amount = 9999999999 };
+
+            // Act
+            var result = await _service.DepositFundsAsync(deposit);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(9999999999, result.Amount);
+        }
+
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task DepositFundsAsync_ExistingBalanceAndDepositAmount_ReturnsNewBalance()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 100.28m });
             var deposit = new Deposit { Amount = 50 };
 
             // Act
@@ -53,16 +85,7 @@ namespace Betsson.OnlineWallets.UnitTests
 
             // Assert
             _logger.LogInformation("New balance returned: {Amount}", result.Amount);
-            _mockRepo.Verify(r => r.InsertOnlineWalletEntryAsync(It.Is<OnlineWalletEntry>(
-                e => e.Amount == 50 && e.BalanceBefore == 10)), Times.Once());
+            Assert.AreEqual(150.28m, result.Amount);
         }
-
-
-
-
-
-
-
-
     }
 }

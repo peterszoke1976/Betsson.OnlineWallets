@@ -23,15 +23,77 @@ namespace Betsson.OnlineWallets.UnitTests
             _logger = loggerFactory.CreateLogger<OnlineWalletWithdrawServiceTests>();
         }
 
-       
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task WithdrawFundsAsync_WithdrawAmount_ReturnsNewBalance()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50 });
+            var withdrawal = new Withdrawal { Amount = 10 };
+
+            // Act
+            var result = await _service.WithdrawFundsAsync(withdrawal);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(40, result.Amount);
+        }
+
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task WithdrawFundsAsync_WithdrawFullBalance_ReturnsZeroBalance()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 15015 });
+            var withdrawal = new Withdrawal { Amount = 15015 };
+
+            // Act
+            var result = await _service.WithdrawFundsAsync(withdrawal);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(0, result.Amount);
+        }
+
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task WithdrawFundsAsync_WithdrawDecimalAmount_ReturnsNewBalance()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 1.15m });
+            var withdrawal = new Withdrawal { Amount = 0.45m };
+
+            // Act
+            var result = await _service.WithdrawFundsAsync(withdrawal);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(0.7m, result.Amount);
+        }
+
+        [TestMethod]
+        [TestCategory("Positive")]
+        public async Task WithdrawFundsAsync_WithdrawHighAmount_ReturnsNewBalance()
+        {
+            // Arrange
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 9999999999 });
+            var withdrawal = new Withdrawal { Amount = 9999999998 };
+
+            // Act
+            var result = await _service.WithdrawFundsAsync(withdrawal);
+
+            // Assert
+            _logger.LogInformation("New balance returned: {Amount}", result.Amount);
+            Assert.AreEqual(1, result.Amount);
+        }
+
         [TestMethod]
         [TestCategory("Negative")]
         public async Task WithdrawFundsAsync_InsufficientBalance_ThrowsException()
         {
             // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync())
-                .ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50, Amount = 0 });
-            var withdrawal = new Withdrawal { Amount = 100 };
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50, Amount = 0 });
+            var withdrawal = new Withdrawal { Amount = 50.1m };
 
             // Act & Assert
             try
@@ -45,16 +107,6 @@ namespace Betsson.OnlineWallets.UnitTests
                 Assert.AreEqual("Invalid withdrawal amount. There are insufficient funds.", ex.Message, "Exception message mismatch");
 
             }
-            catch (Exception ex)
-            {
-                _logger.LogError("Unexpected exception thrown: {Message}", ex.Message);
-                Assert.Fail($"Expected InsufficientBalanceException, but got {ex.GetType().Name}");
-            }
-
-
         }
-
-
-
     }
 }
