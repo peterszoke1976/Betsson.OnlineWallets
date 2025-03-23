@@ -105,7 +105,6 @@ namespace Betsson.OnlineWallets.UnitTests
             {
                 _logger.LogInformation("Exception thrown as expected: {Message}", ex.Message);
                 Assert.AreEqual("Invalid withdrawal amount. There are insufficient funds.", ex.Message, "Exception message mismatch");
-
             }
         }
     }
