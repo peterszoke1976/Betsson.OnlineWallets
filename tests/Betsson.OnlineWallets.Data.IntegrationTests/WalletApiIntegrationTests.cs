@@ -15,9 +15,9 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
     {
         private HttpClient _httpClient;
         private readonly ILogger<WalletApiIntegrationTests> _logger;
-        private static readonly string _balanceUri = "http://localhost:5000/onlinewallet/balance";
-        private static readonly string _depositUri = "http://localhost:5047/onlinewallet/deposit";
-        private static readonly string _withdrawUri = "http://localhost:5047/onlinewallet/withdraw";
+        private static string _balanceUri = "http://localhost:5000/onlinewallet/balance";
+        private static string _depositUri = "http://localhost:5047/onlinewallet/deposit";
+        private static string _withdrawUri = "http://localhost:5047/onlinewallet/withdraw";
         private static readonly WebApplicationFactory<Program> _factory = new();
 
         public WalletApiIntegrationTests()
@@ -67,7 +67,7 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
         [TestMethod]
         [TestCategory("Positive")]
         [DoNotParallelize]
-        public async Task AddDeposit_MakeWithdrawal_MaxDecimalValue_ReturnZeroBalance()
+        public async Task AddDeposit_MakeWithdrawal_MaxDecimalValue_ReturnsZeroBalance()
         {
             // Add deposit to the wallet, check the response status
             var depositResponse = await _httpClient.PostAsJsonAsync(_depositUri, new Deposit { Amount = decimal.MaxValue });
@@ -87,7 +87,7 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
         [TestMethod]
         [TestCategory("Positive")]
         [DoNotParallelize]
-        public async Task AddMultipleDeposits_ReturnNewBalance()
+        public async Task AddMultipleDeposits_ReturnsNewBalance()
         {
             // Add multiple deposits to the wallet, check the response status
             var deposti1 = await _httpClient.PostAsJsonAsync(_depositUri, new Deposit { Amount = 1 });
@@ -106,7 +106,7 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
         [TestMethod]
         [TestCategory("Positive")]
         [DoNotParallelize]
-        public async Task AddDeposit_MakeWithdraw_ReturnZeroBalance()
+        public async Task AddDeposit_MakeWithdrawal_ReturnsZeroBalance()
         {
             // Add deposit to the wallet, check the response status
             var depositResponse = await _httpClient.PostAsJsonAsync(_depositUri, new Deposit { Amount = 0.1m });
@@ -126,7 +126,7 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
         [TestMethod]
         [TestCategory("Positive")]
         [DoNotParallelize]
-        public async Task AddDeposit_MakeMultipleWithdrawals_ReturnNewBalance()
+        public async Task AddDeposit_MakeMultipleWithdrawals_ReturnsNewBalance()
         {
             // Add deposit to the wallet, check the response status
             var depositResponse = await _httpClient.PostAsJsonAsync(_depositUri, new Deposit { Amount = 1000 });
@@ -152,7 +152,7 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
         [TestMethod]
         [TestCategory("Positive")]
         [DoNotParallelize]
-        public async Task AddMultipleDeposits_MakeMultipleWithdrawals_ReturnNewBalance()
+        public async Task AddMultipleDeposits_MakeMultipleWithdrawals_ReturnsNewBalance()
         {
             // Add deposits and withdrawals, check the balance
             // First
@@ -183,13 +183,26 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
             await CheckBalanceAsync(1);
         }
 
+        [TestMethod]
+        [TestCategory("Negative")]
+        public async Task AddDeposit_InvalidJsonFormat()
+        {
+            // Act: Send invalid JSON
+            var invalidJsonContent = new StringContent( "{ amount: 1 }", Encoding.UTF8, "application/json" );
+            var depositResponse = await _httpClient.PostAsync(_depositUri, invalidJsonContent);
 
+            // Assert status code
+            Assert.AreEqual(HttpStatusCode.BadRequest, depositResponse.StatusCode, "Expected 400 Bad Request status code");
 
+            // Read and deserialize response
+            var responseContent = await depositResponse.Content.ReadAsStringAsync();
+            _logger.LogInformation("Response content: {Content}", responseContent);
+            var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
 
-
-
-
-
+            // Assert error details
+            Assert.AreEqual("One or more validation errors occurred.", errorResponse.Title, "Unexpected error title");
+            Assert.AreEqual("The depositRequest field is required.", errorResponse.Errors["depositRequest"][0], "Unexpected depositRequest");
+        }
 
         [TestMethod]
         [TestCategory("Negative")]
@@ -207,7 +220,6 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
             var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
 
             // Assert error message
-            Assert.IsTrue(errorResponse.Errors.ContainsKey("Amount"), "Expected validation error for 'Amount'");
             Assert.AreEqual("'Amount' must be greater than or equal to '0'.", errorResponse.Errors["Amount"][0], "Unexpected error message");
             Assert.AreEqual("One or more validation errors occurred.", errorResponse.Title, "Unexpected error title");
         }
@@ -228,7 +240,6 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
             var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
 
             // Assert error message
-            Assert.IsTrue(errorResponse.Errors.ContainsKey("Amount"), "Expected validation error for 'Amount'");
             Assert.AreEqual("'Amount' must be greater than or equal to '0'.", errorResponse.Errors["Amount"][0], "Unexpected error message");
             Assert.AreEqual("One or more validation errors occurred.", errorResponse.Title, "Unexpected error title");
         }
@@ -261,21 +272,17 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
 
         [TestMethod]
         [TestCategory("Negative")]
-        public async Task AddDeposit_InvalidType_ReturnsValidationError()
+        public async Task AddDeposit_InvalidAmountType()
         {
             // Act: Send raw JSON with a string value for Amount
-            var jsonContent = new StringContent(
-                JsonConvert.SerializeObject(new { Amount = "abc" }),
-                Encoding.UTF8,
-                "application/json"
-            );
-            var response = await _httpClient.PostAsync(_depositUri, jsonContent);
+            var invalidJsonContent = new StringContent(JsonConvert.SerializeObject(new { Amount = "abc" }), Encoding.UTF8, "application/json");
+            var depositResponse = await _httpClient.PostAsync(_depositUri, invalidJsonContent);
 
             // Assert status code
-            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, "Expected 400 Bad Request status code");
+            Assert.AreEqual(HttpStatusCode.BadRequest, depositResponse.StatusCode, "Expected 400 Bad Request status code");
 
             // Read and deserialize response
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await depositResponse.Content.ReadAsStringAsync();
             _logger.LogInformation("Response content: {Content}", responseContent);
             var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
 
@@ -287,21 +294,17 @@ namespace Betsson.OnlineWallets.Data.IntegrationTests
 
         [TestMethod]
         [TestCategory("Negative")]
-        public async Task MakeWithdrawal_InvalidType_ReturnsValidationError()
+        public async Task MakeWithdrawal_InvalidAmountType()
         {
             // Act: Send raw JSON with a string value for Amount
-            var jsonContent = new StringContent(
-                JsonConvert.SerializeObject(new { Amount = "abc" }),
-                Encoding.UTF8,
-                "application/json"
-            );
-            var response = await _httpClient.PostAsync(_withdrawUri, jsonContent);
+            var invalidJsonContent = new StringContent(JsonConvert.SerializeObject(new { Amount = "abc" }), Encoding.UTF8, "application/json");
+            var withdrawResponse = await _httpClient.PostAsync(_withdrawUri, invalidJsonContent);
 
             // Assert status code
-            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode, "Expected 400 Bad Request status code");
+            Assert.AreEqual(HttpStatusCode.BadRequest, withdrawResponse.StatusCode, "Expected 400 Bad Request status code");
 
             // Read and deserialize response
-            var responseContent = await response.Content.ReadAsStringAsync();
+            var responseContent = await withdrawResponse.Content.ReadAsStringAsync();
             _logger.LogInformation("Response content: {Content}", responseContent);
             var errorResponse = JsonConvert.DeserializeObject<ErrorResponse>(responseContent);
 

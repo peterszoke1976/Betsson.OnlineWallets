@@ -73,18 +73,18 @@ namespace Betsson.OnlineWallets.UnitTests
 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task WithdrawFundsAsync_WithdrawHighAmount_ReturnsNewBalance()
+        public async Task WithdrawFundsAsync_WithdrawDecimalMaxValue_ReturnsZeroBalance()
         {
             // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 9999999999 });
-            var withdrawal = new Withdrawal { Amount = 9999999998 };
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = decimal.MaxValue });
+            var withdrawal = new Withdrawal { Amount = decimal.MaxValue };
 
             // Act
             var result = await _service.WithdrawFundsAsync(withdrawal);
 
             // Assert
             _logger.LogInformation("New balance returned: {Amount}", result.Amount);
-            Assert.AreEqual(1, result.Amount);
+            Assert.AreEqual(0, result.Amount);
         }
 
         [TestMethod]
@@ -92,7 +92,7 @@ namespace Betsson.OnlineWallets.UnitTests
         public async Task WithdrawFundsAsync_WithdrawInsufficientAmount_ThrowsInsufficientBalanceException()
         {
             // Arrange
-            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50, Amount = 0 });
+            _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 50 });
             var withdrawal = new Withdrawal { Amount = 50.1m };
 
             // Act & Assert
@@ -107,5 +107,6 @@ namespace Betsson.OnlineWallets.UnitTests
                 Assert.AreEqual("Invalid withdrawal amount. There are insufficient funds.", ex.Message, "Exception message mismatch");
             }
         }
+
     }
 }

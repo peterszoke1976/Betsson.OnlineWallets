@@ -57,19 +57,19 @@ namespace Betsson.OnlineWallets.UnitTests
 
         [TestMethod]
         [TestCategory("Positive")]
-        public async Task DepositFundsAsync_DepositHighAmount_ReturnsNewBalance()
+        public async Task DepositFundsAsync_DepositMaxDecimalValue_ReturnsNewBalance()
         {
             // Arrange
 
             _mockRepo.Setup(r => r.GetLastOnlineWalletEntryAsync()).ReturnsAsync(new OnlineWalletEntry { BalanceBefore = 0 });
-            var deposit = new Deposit { Amount = 9999999999 };
+            var deposit = new Deposit { Amount = decimal.MaxValue };
 
             // Act
             var result = await _service.DepositFundsAsync(deposit);
 
             // Assert
             _logger.LogInformation("New balance returned: {Amount}", result.Amount);
-            Assert.AreEqual(9999999999, result.Amount);
+            Assert.AreEqual(decimal.MaxValue, result.Amount);
         }
 
         [TestMethod]
@@ -87,5 +87,6 @@ namespace Betsson.OnlineWallets.UnitTests
             _logger.LogInformation("New balance returned: {Amount}", result.Amount);
             Assert.AreEqual(150.28m, result.Amount);
         }
+
     }
 }
